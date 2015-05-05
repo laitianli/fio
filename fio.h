@@ -218,8 +218,8 @@ struct thread_data {
 	/*
 	 * List of free and busy io_u's
 	 */
-	struct io_u_ring io_u_requeues;
-	struct io_u_queue io_u_freelist;
+	struct io_u_ring io_u_requeues;//IO重排队列
+	struct io_u_queue io_u_freelist;//IO空闲队列
 	struct io_u_queue io_u_all;
 	pthread_mutex_t io_u_lock;
 	pthread_cond_t free_cond;

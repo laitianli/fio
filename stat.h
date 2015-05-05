@@ -153,8 +153,8 @@ struct thread_stat {
 	/*
 	 * bandwidth and latency stats
 	 */
-	struct io_stat clat_stat[DDIR_RWDIR_CNT]; /* completion latency */
-	struct io_stat slat_stat[DDIR_RWDIR_CNT]; /* submission latency */
+	struct io_stat clat_stat[DDIR_RWDIR_CNT]; /* completion latency */ /* 延迟完成 */
+	struct io_stat slat_stat[DDIR_RWDIR_CNT]; /* submission latency */ /* 提交延迟 */
 	struct io_stat lat_stat[DDIR_RWDIR_CNT]; /* total latency */
 	struct io_stat bw_stat[DDIR_RWDIR_CNT]; /* bandwidth stats */
 	struct io_stat iops_stat[DDIR_RWDIR_CNT]; /* IOPS stats */

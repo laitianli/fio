@@ -371,7 +371,7 @@ static struct ioengine_ops ioengine_pvrw = {
 	.flags		= FIO_SYNCIO,
 };
 #endif
-
+/*在main函数之前调用*/
 static void fio_init fio_syncio_register(void)
 {
 	register_ioengine(&ioengine_rw);
@@ -381,7 +381,7 @@ static void fio_init fio_syncio_register(void)
 	register_ioengine(&ioengine_pvrw);
 #endif
 }
-
+/*在main函数之后调用*/
 static void fio_exit fio_syncio_unregister(void)
 {
 	unregister_ioengine(&ioengine_rw);

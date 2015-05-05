@@ -152,7 +152,7 @@ static void __fio_gettime(struct timeval *tp)
 		break;
 #endif
 #ifdef CONFIG_CLOCK_GETTIME
-	case CS_CGETTIME: {
+	case CS_CGETTIME: {//用时方式获取时间 fio_clock_source = 2
 		struct timespec ts;
 
 		if (fill_clock_gettime(&ts) < 0) {

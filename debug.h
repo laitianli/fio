@@ -52,5 +52,10 @@ static inline void dprint(int type, const char *str, ...)
 {
 }
 #endif
-
+#define MY_DEBUG 1
+#if defined(MY_DEBUG)
+#define PLog(fmt,arg...) printf("[MY_LOG]=[%s:%d]="fmt"\n",__FUNCTION__,__LINE__,##arg) 
+#else
+#define PLog(fmt,arg...)
+#endif
 #endif

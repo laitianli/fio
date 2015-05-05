@@ -32,8 +32,9 @@ enum {
  * The io unit
  */
 struct io_u {
-	struct timeval start_time;
-	struct timeval issue_time;
+	/*如果ioenginer采用sync时，start_time和issue_time几乎一样；但如果采用异步的，start_timer和issue_timer则不一样。*/
+	struct timeval start_time;/*在open文件后，调用引擎init函数之后的时刻，在get_io_u*/
+	struct timeval issue_time;/*开始执行read/write的时刻*/
 
 	struct fio_file *file;
 	unsigned int flags;
@@ -66,8 +67,8 @@ struct io_u {
 	 * IO engine state, may be different from above when we get
 	 * partial transfers / residual data counts
 	 */
-	void *xfer_buf;
-	unsigned long xfer_buflen;
+	void *xfer_buf;	/*数据首地址*/
+	unsigned long xfer_buflen;/*数据长度*/
 
 	/*
 	 * Parameter related to pre-filled buffers and
@@ -77,7 +78,7 @@ struct io_u {
 
 	struct io_piece *ipo;
 
-	unsigned int resid;
+	unsigned int resid;/*一次read/write后，剩下的数据长度*/
 	unsigned int error;
 
 	/*

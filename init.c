@@ -332,6 +332,7 @@ static int setup_thread_area(void)
 		size += sizeof(unsigned int);
 
 #ifndef CONFIG_NO_SHM
+		/*创建共享内存用于存放thread_data数据(只有进程时才有用到)*/
 		shm_id = shmget(0, size, IPC_CREAT | 0600);
 		if (shm_id != -1)
 			break;
@@ -390,6 +391,7 @@ static struct thread_data *get_new_job(int global, struct thread_data *parent,
 		set_cmd_options(&def_thread);
 		return &def_thread;
 	}
+	/* 分配线程数组 */
 	if (setup_thread_area()) {
 		log_err("error: failed to setup shm segment\n");
 		return NULL;
@@ -1945,7 +1947,7 @@ static void show_closest_option(const char *name)
 	if (best_option != -1)
 		log_err("Did you mean %s?\n", l_opts[best_option].name);
 }
-
+/*解析fio参数*/
 int parse_cmd_line(int argc, char *argv[], int client_type)
 {
 	struct thread_data *td = NULL;
@@ -2117,7 +2119,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				free(exec_profile);
 			exec_profile = strdup(optarg);
 			break;
-		case FIO_GETOPT_JOB: {
+		case FIO_GETOPT_JOB: {/*fio参数有几个参数，此流程就执行几次，opt分别是参数名字*/
 			const char *opt = l_opts[lidx].name;
 			char *val = optarg;
 
@@ -2128,6 +2130,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 				td = NULL;
 				did_arg = 1;
 			}
+			/*参数--name=test_read*/
 			if (!td) {
 				int is_section = !strncmp(opt, "name", 4);
 				int global = 0;
@@ -2139,6 +2142,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 					continue;
 
 				td = get_new_job(global, &def_thread, 1, NULL);
+				/*加载IO引擎*/
 				if (!td || ioengine_load(td)) {
 					if (td) {
 						put_job(td);
@@ -2155,7 +2159,7 @@ int parse_cmd_line(int argc, char *argv[], int client_type)
 			    l_opts[lidx].has_arg == required_argument) {
 				log_err("fio: option %s requires an argument\n", opt);
 				ret = 1;
-			} else
+			} else/*开始解析其它的参数*/
 				ret = fio_cmd_option_parse(td, opt, val);
 
 			if (ret) {

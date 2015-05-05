@@ -1056,7 +1056,7 @@ static struct fio_file *get_next_file_rr(struct thread_data *td, int goodf,
 
 			if (td->nr_open_files >= td->o.open_files)
 				return ERR_PTR(-EBUSY);
-
+			/*调用函数open*/
 			err = td_io_open_file(td, f);
 			if (err) {
 				dprint(FD_FILE, "error %d on open of %s\n",
@@ -1106,7 +1106,7 @@ static struct fio_file *__get_next_file(struct thread_data *td)
 
 	if (td->o.file_service_type == FIO_FSERVICE_RR ||
 	    td->o.file_service_type == FIO_FSERVICE_SEQ)
-		f = get_next_file_rr(td, FIO_FILE_open, FIO_FILE_closing);
+		f = get_next_file_rr(td, FIO_FILE_open, FIO_FILE_closing);//调用open函数
 	else
 		f = get_next_file_rand(td, FIO_FILE_open, FIO_FILE_closing);
 
@@ -1140,7 +1140,7 @@ static long set_io_u_file(struct thread_data *td, struct io_u *io_u)
 	struct fio_file *f;
 
 	do {
-		f = get_next_file(td);
+		f = get_next_file(td);/*打开文件，并获取fio_file对象指针*/
 		if (IS_ERR_OR_NULL(f))
 			return PTR_ERR(f);
 
@@ -1329,8 +1329,8 @@ struct io_u *__get_io_u(struct thread_data *td)
 
 again:
 	if (!io_u_rempty(&td->io_u_requeues))
-		io_u = io_u_rpop(&td->io_u_requeues);
-	else if (!queue_full(td)) {
+		io_u = io_u_rpop(&td->io_u_requeues);/*从重排队列中获取io对象*/
+	else if (!queue_full(td)) {/* 从空闲列表中获取io对象 */
 		io_u = io_u_qpop(&td->io_u_freelist);
 
 		io_u->file = NULL;
@@ -1545,7 +1545,7 @@ out:
 	assert(io_u->file);
 	if (!td_io_prep(td, io_u)) {
 		if (!td->o.disable_slat)
-			fio_gettime(&io_u->start_time, NULL);
+			fio_gettime(&io_u->start_time, NULL);//获取任务开始时间
 		if (do_scramble)
 			small_content_scramble(io_u);
 		return io_u;
@@ -1600,7 +1600,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	if (!td->o.disable_lat) {
 		unsigned long tusec;
 
-		tusec = utime_since(&io_u->start_time, &icd->time);
+		tusec = utime_since(&io_u->start_time, &icd->time);/*执行任务的时间:引擎init,*/
 		add_lat_sample(td, idx, tusec, bytes, io_u->offset);
 
 		if (td->flags & TD_F_PROFILE_OPS) {
@@ -1619,7 +1619,7 @@ static void account_io_completion(struct thread_data *td, struct io_u *io_u,
 	}
 
 	if (!td->o.disable_clat) {
-		add_clat_sample(td, idx, lusec, bytes, io_u->offset);
+		add_clat_sample(td, idx, lusec, bytes, io_u->offset);/* 任务的执行时间read/write时间 */
 		io_u_mark_latency(td, lusec);
 	}
 
@@ -1698,18 +1698,18 @@ static void io_completed(struct thread_data *td, struct io_u **io_u_ptr,
 	td->last_ddir = ddir;
 
 	if (!io_u->error && ddir_rw(ddir)) {
-		unsigned int bytes = io_u->buflen - io_u->resid;
+		unsigned int bytes = io_u->buflen - io_u->resid;/*一次IO传输的字节数*/
 		const enum fio_ddir oddir = ddir ^ 1;
 		int ret;
 
 		td->io_blocks[ddir]++;
 		td->this_io_blocks[ddir]++;
-		td->io_bytes[ddir] += bytes;
+		td->io_bytes[ddir] += bytes;/*完成的字节总数*/
 
 		if (!(io_u->flags & IO_U_F_VER_LIST))
 			td->this_io_bytes[ddir] += bytes;
 
-		if (ddir == DDIR_WRITE) {
+		if (ddir == DDIR_WRITE) {//直接写
 			if (f) {
 				if (f->first_write == -1ULL ||
 				    io_u->offset < f->first_write)
@@ -1785,7 +1785,7 @@ static void init_icd(struct thread_data *td, struct io_completion_data *icd,
 	int ddir;
 
 	if (!gtod_reduce(td))
-		fio_gettime(&icd->time, NULL);
+		fio_gettime(&icd->time, NULL);//获取fio任务结束时间
 
 	icd->nr = nr;
 
@@ -1813,16 +1813,17 @@ static void ios_completed(struct thread_data *td,
 /*
  * Complete a single io_u for the sync engines.
  */
+ /* io enginer 为sync的完成处理函数 */
 int io_u_sync_complete(struct thread_data *td, struct io_u *io_u)
 {
 	struct io_completion_data icd;
 	int ddir;
-
-	init_icd(td, &icd, 1);
+//PLog("call io_completed");
+	init_icd(td, &icd, 1); //初始化icd对象，同时获取任务完成时间
 	io_completed(td, &io_u, &icd);
 
 	if (io_u)
-		put_io_u(td, io_u);
+		put_io_u(td, io_u);//关闭时间
 
 	if (icd.error) {
 		td_verror(td, icd.error, "io_u_sync_complete");

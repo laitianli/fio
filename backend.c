@@ -467,10 +467,10 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 
 	switch (*ret) {
 	case FIO_Q_COMPLETED:
-		if (io_u->error) {
+		if (io_u->error) {/* 传输出现错误 */
 			*ret = -io_u->error;
 			clear_io_u(td, io_u);
-		} else if (io_u->resid) {
+		} else if (io_u->resid) {/*存在数据没有传输完成的情况*/
 			int bytes = io_u->xfer_buflen - io_u->resid;
 			struct fio_file *f = io_u->file;
 
@@ -501,9 +501,11 @@ int io_queue_event(struct thread_data *td, struct io_u *io_u, int *ret,
 			f = io_u->file;
 			if (io_u->offset == f->real_file_size)
 				goto sync_done;
-
+			/* 插入到重排队列 ，<如果使任务重新执行呢?>*/
 			requeue_io_u(td, &io_u);
-		} else {
+		}
+		else 
+		{//IO处理完成且全部处理完成
 sync_done:
 			if (comp_time && (__should_check_rate(td, DDIR_READ) ||
 			    __should_check_rate(td, DDIR_WRITE) ||
@@ -827,7 +829,8 @@ static uint64_t do_io(struct thread_data *td)
 		if (bytes_issued >= total_bytes)
 			break;
 
-		io_u = get_io_u(td);
+		io_u = get_io_u(td); //调用open函数
+
 		if (IS_ERR_OR_NULL(io_u)) {
 			int err = PTR_ERR(io_u);
 
@@ -858,7 +861,7 @@ static uint64_t do_io(struct thread_data *td)
 			}
 
 			if (verify_state_should_stop(td, io_u)) {
-				put_io_u(td, io_u);
+				put_io_u(td, io_u);//关闭文件
 				break;
 			}
 
@@ -888,8 +891,9 @@ static uint64_t do_io(struct thread_data *td)
 				break;
 			ret = workqueue_enqueue(&td->io_wq, io_u);
 		} else {
-			ret = td_io_queue(td, io_u);
-
+			ret = td_io_queue(td, io_u);//执行IO任务
+//PLog("call io_queue_event");
+			/* IO完成后的处理 */
 			if (io_queue_event(td, io_u, &ret, ddir, &bytes_issued, 1, &comp_time))
 				break;
 
@@ -1515,13 +1519,13 @@ static void *thread_main(void *data)
 	    workqueue_init(td, &td->io_wq, io_workqueue_fn, td->o.iodepth))
 		goto err;
 
-	fio_gettime(&td->epoch, NULL);
+	fio_gettime(&td->epoch, NULL);/*任务的起始时间*/
 	fio_getrusage(&td->ru_start);
 	clear_state = 0;
 	while (keep_running(td)) {
 		uint64_t verify_bytes;
 
-		fio_gettime(&td->start, NULL);
+		fio_gettime(&td->start, NULL);/* IO 任务开始采样时间 */
 		memcpy(&td->bw_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->iops_sample_time, &td->start, sizeof(td->start));
 		memcpy(&td->tv_cache, &td->start, sizeof(td->start));
@@ -1544,7 +1548,7 @@ static void *thread_main(void *data)
 		if (td->o.verify_only && (td_write(td) || td_rw(td)))
 			verify_bytes = do_dry_run(td);
 		else
-			verify_bytes = do_io(td);
+			verify_bytes = do_io(td);/*开始IO操作*/
 
 		clear_state = 1;
 
@@ -1636,7 +1640,7 @@ err:
 
 	if (o->verify_async)
 		verify_async_exit(td);
-
+	//关闭文件
 	close_and_free_files(td);
 	cleanup_io_u(td);
 	close_ioengine(td);
@@ -1680,7 +1684,7 @@ static int fork_main(int shmid, int offset)
 	void *data, *ret;
 
 #if !defined(__hpux) && !defined(CONFIG_NO_SHM)
-	data = shmat(shmid, NULL, 0);
+	data = shmat(shmid, NULL, 0);//共享内存
 	if (data == (void *) -1) {
 		int __err = errno;
 
@@ -1693,7 +1697,7 @@ static int fork_main(int shmid, int offset)
 	 */
 	data = threads;
 #endif
-
+	/*每个进程的私有数据*/
 	td = data + offset * sizeof(struct thread_data);
 	ret = thread_main(td);
 	shmdt(data);
@@ -2049,7 +2053,7 @@ reap:
 				pid_t pid;
 				dprint(FD_PROCESS, "will fork\n");
 				pid = fork();
-				if (!pid) {
+				if (!pid) {//子进程
 					int ret = fork_main(shm_id, i);
 
 					_exit(ret);
@@ -2220,7 +2224,7 @@ int fio_backend(void)
 {
 	struct thread_data *td;
 	int i;
-
+	//exec_profile=(null),thread_number=3,write_bw_log=0
 	if (exec_profile) {
 		if (load_profile(exec_profile))
 			return 1;
@@ -2250,12 +2254,13 @@ int fio_backend(void)
 
 	cgroup_list = smalloc(sizeof(*cgroup_list));
 	INIT_FLIST_HEAD(cgroup_list);
-
+	/*创建线程，执行IO*/
 	run_threads();
 
 	wait_for_helper_thread_exit();
-
+	/*显示统计信息*/
 	if (!fio_abort) {
+
 		__show_run_stats();
 		if (write_bw_log) {
 			for (i = 0; i < DDIR_RWDIR_CNT; i++) {

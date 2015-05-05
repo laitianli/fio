@@ -259,7 +259,7 @@ int calc_lat(struct io_stat *is, unsigned long *min, unsigned long *max,
 
 	return 1;
 }
-
+/* 添加--group_reporting参数 */
 void show_group_stats(struct group_run_stats *rs)
 {
 	char *p1, *p2, *p3, *p4;
@@ -376,15 +376,15 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 		return;
 
 	i2p = is_power_of_2(rs->kb_base);
-	runt = ts->runtime[ddir];
-
-	bw = (1000 * ts->io_bytes[ddir]) / runt;
+	runt = ts->runtime[ddir];  //运行时间
+	//PLog("ts->unit_base:%u",ts->unit_base);//
+	bw = (1000 * ts->io_bytes[ddir]) / runt; //带宽
 	io_p = num2str(ts->io_bytes[ddir], 6, 1, i2p, 8);
-	bw_p = num2str(bw, 6, 1, i2p, ts->unit_base);
+	bw_p = num2str(bw, 6, 1, i2p, ts->unit_base);/*ts->unit_base=8*/
 
 	iops = (1000 * (uint64_t)ts->total_io_u[ddir]) / runt;
 	iops_p = num2str(iops, 6, 1, 0, 0);
-
+	/*显示IO总量，带宽，运行时间*/
 	log_info("  %s: io=%s, bw=%s/s, iops=%s, runt=%6llumsec\n",
 				rs->unified_rw_rep ? "mixed" : str[ddir],
 				io_p, bw_p, iops_p,
@@ -394,14 +394,14 @@ static void show_ddir_status(struct group_run_stats *rs, struct thread_stat *ts,
 	free(bw_p);
 	free(iops_p);
 
-	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->slat_stat[ddir], &min, &max, &mean, &dev))//is->samples=0，如果非0，显示slat信息
 		display_lat("slat", min, max, mean, dev);
-	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->clat_stat[ddir], &min, &max, &mean, &dev))//显示clat信息
 		display_lat("clat", min, max, mean, dev);
-	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))
+	if (calc_lat(&ts->lat_stat[ddir], &min, &max, &mean, &dev))//显示lat信息
 		display_lat(" lat", min, max, mean, dev);
-
-	if (ts->clat_percentiles) {
+	/*显示clat percentiles信息*/
+	if (ts->clat_percentiles) {		
 		show_clat_percentiles(ts->io_u_plat[ddir],
 					ts->clat_stat[ddir].samples,
 					ts->percentile_list,
@@ -667,15 +667,15 @@ static void show_thread_status_normal(struct thread_stat *ts,
 	if (strlen(ts->description))
 		log_info("  Description  : [%s]\n", ts->description);
 
-	if (ts->io_bytes[DDIR_READ])
+	if (ts->io_bytes[DDIR_READ])/*读的统计结果*/
 		show_ddir_status(rs, ts, DDIR_READ);
-	if (ts->io_bytes[DDIR_WRITE])
+	if (ts->io_bytes[DDIR_WRITE])/*写的统计结果*/
 		show_ddir_status(rs, ts, DDIR_WRITE);
 	if (ts->io_bytes[DDIR_TRIM])
 		show_ddir_status(rs, ts, DDIR_TRIM);
 
 	show_latencies(ts);
-
+	
 	runtime = ts->total_run_time;
 	if (runtime) {
 		double runt = (double) runtime;
@@ -686,7 +686,7 @@ static void show_thread_status_normal(struct thread_stat *ts,
 		usr_cpu = 0;
 		sys_cpu = 0;
 	}
-
+	/*显示CPU信息*/
 	log_info("  cpu          : usr=%3.2f%%, sys=%3.2f%%, ctx=%llu,"
 		 " majf=%llu, minf=%llu\n", usr_cpu, sys_cpu,
 			(unsigned long long) ts->ctx,
@@ -1221,7 +1221,7 @@ static void sum_stat(struct io_stat *dst, struct io_stat *src, int nr)
 	/*
 	 * Compute new mean and S after the merge
 	 * <http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-	 *  #Parallel_algorithm>
+	 *  #Parallel_algorithm>  //采用并行算法计算方差
 	 */
 	if (nr == 1) {
 		mean = src->mean.u.f;
@@ -1567,7 +1567,7 @@ void __show_run_stats(void)
 			struct json_object *tmp = show_thread_status_json(ts, rs);
 			json_array_add_value_object(array, tmp);
 		} else
-			show_thread_status_normal(ts, rs);
+			show_thread_status_normal(ts, rs);/* 打印出统计信息 */
 	}
 	if (output_format == FIO_OUTPUT_JSON) {
 		/* disk util stats, if any */
@@ -1728,7 +1728,8 @@ void check_for_running_stats(void)
 		return;
 	}
 }
-
+/* <http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+	 *  #Parallel_algorithm>  //采用并行算法计算方差 */
 static inline void add_stat_sample(struct io_stat *is, unsigned long data)
 {
 	double val = data;

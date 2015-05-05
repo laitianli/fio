@@ -286,7 +286,7 @@ int td_io_queue(struct thread_data *td, struct io_u *io_u)
 
 	if (td->io_ops->flags & FIO_SYNCIO) {
 		if (fio_fill_issue_time(td))
-			fio_gettime(&io_u->issue_time, NULL);
+			fio_gettime(&io_u->issue_time, NULL);//获取任务issue时间
 
 		/*
 		 * only used for iolog

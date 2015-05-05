@@ -9,7 +9,7 @@
 /*
  * Use for maintaining statistics
  */
-struct io_stat {
+struct io_stat {/*Î¬»¤Í³¼Æ*/
 	uint64_t max_val;
 	uint64_t min_val;
 	uint64_t samples;
